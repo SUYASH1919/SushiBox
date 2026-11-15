@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SushiBox</string>
+    <string name="title_activity_main">SushiBox</string>
+    <string name="package_name">com.suyash.sushibox</string>
+    <string name="custom_url_scheme">com.suyash.sushibox</string>
+</resources>

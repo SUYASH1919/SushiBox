@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#070d1b">
+<title>SushiBox - Boxing Timer</title>
+
+<style>
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+}
+
+body {
+background: #070d1b;
+color: white;
+font-family: Arial, sans-serif;
+min-height: 100vh;
+}
+
+.app {
+width: 100%;
+max-width: 460px;
+min-height: 100vh;
+margin: auto;
+padding: 25px 22px;
+background: linear-gradient(160deg,#101d38,#070d1b 65%);
+}
+
+header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 45px;
+}
+
+.logo {
+font-size: 28px;
+font-weight: 900;
+color: #2995ff;
+letter-spacing: 1px;
+}
+
+.logo span {
+color: white;
+}
+
+.tag {
+color: #7891b8;
+font-size: 11px;
+letter-spacing: 2px;
+}
+
+h2 {
+font-size: 25px;
+margin-bottom: 9px;
+}
+
+.subtitle {
+color: #8292ae;
+font-size: 13px;
+margin-bottom: 30px;
+}
+
+.field {
+margin-bottom: 23px;
+}
+
+.field label {
+display: block;
+color: #a7b9d6;
+font-size: 13px;
+margin-bottom: 10px;
+}
+
+.field input {
+width: 100%;
+padding: 17px;
+border: 1px solid #243b60;
+border-radius: 12px;
+background: #101d33;
+color: white;
+font-size: 19px;
+outline: none;
+}
+
+.field input:focus {
+border-color: #2995ff;
+}
+
+.unit {
+color: #7891b8;
+font-size: 11px;
+margin-top: 7px;
+}
+
+button {
+cursor: pointer;
+border: none;
+font-weight: bold;
+transition: 0.2s;
+}
+
+button:active {
+transform: scale(.96);
+}
+
+.primary {
+width: 100%;
+padding: 18px;
+background: #1689ff;
+color: white;
+border-radius: 13px;
+font-size: 17px;
+margin-top: 15px;
+box-shadow: 0 5px 25px #1689ff33;
+}
+
+.primary:hover {
+background: #0876e8;
+}
+
+.hidden {
+display: none !important;
+}
+
+.info {
+margin-top: 25px;
+padding: 17px;
+border: 1px solid #1e3558;
+border-radius: 12px;
+color: #8ca2c3;
+font-size: 12px;
+line-height: 1.8;
+}
+
+.timer-screen {
+text-align: center;
+}
+
+.timer-top {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 40px;
+}
+
+.back {
+background: #172a48;
+color: #65adff;
+padding: 11px 16px;
+border-radius: 9px;
+}
+
+.round-info {
+color: #91a9cb;
+font-size: 13px;
+}
+
+.phase {
+font-size: 17px;
+font-weight: 900;
+letter-spacing: 5px;
+margin-bottom: 25px;
+color: #ff4545;
+}
+
+.circle {
+position: relative;
+width: 280px;
+height: 280px;
+margin: auto;
+}
+
+.circle svg {
+width: 100%;
+height: 100%;
+transform: rotate(-90deg);
+}
+
+.track {
+fill: none;
+stroke: #1a2a43;
+stroke-width: 10;
+}
+
+.progress {
+fill: none;
+stroke: #ff4545;
+stroke-width: 10;
+stroke-linecap: round;
+stroke-dasharray: 691.15;
+stroke-dashoffset: 0;
+transition: stroke 0.3s;
+}
+
+.time-display {
+position: absolute;
+inset: 0;
+display: flex;
+align-items: center;
+justify-content: center;
+flex-direction: column;
+}
+
+.time {
+font-size: 64px;
+font-weight: 900;
+font-variant-numeric: tabular-nums;
+}
+
+.time-label {
+color: #7e91ae;
+font-size: 11px;
+letter-spacing: 3px;
+margin-top: 5px;
+}
+
+.status {
+margin-top: 28px;
+font-size: 14px;
+color: #8fa5c7;
+}
+
+.controls {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 13px;
+margin-top: 35px;
+}
+
+.control-btn {
+padding: 17px 10px;
+border-radius: 12px;
+font-size: 15px;
+background: #162844;
+color: white;
+}
+
+.pause-btn {
+background: #1689ff;
+}
+
+.skip-btn {
+border: 1px solid #304d75;
+}
+
+.reset-btn {
+grid-column: span 2;
+background: transparent;
+color: #8ca3c7;
+border: 1px solid #263c5d;
+}
+
+.footer {
+text-align: center;
+margin-top: 45px;
+color: #526987;
+font-size: 11px;
+letter-spacing: 2px;
+}
+
+.finished .phase {
+color: white;
+}
+
+.finished .progress {
+stroke: white;
+}
+
+.finished .time {
+color: white;
+}
+
+.finished-message {
+color: white;
+font-size: 18px;
+font-weight: bold;
+margin-top: 22px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<header>
+<div>
+<div class="logo">SUSHI<span>BOX</span></div>
+<div class="tag">BOXING INTERVAL TIMER</div>
+</div>
+<div>🥊</div>
+</header>
+
+<!-- SCREEN 1: CUSTOMIZATION -->
+
+<section id="setupScreen">
+
+<h2>Customize Workout</h2>
+<p class="subtitle">Set your rounds. Get ready to fight.</p>
+
+<div class="field">
+<label>NUMBER OF ROUNDS</label>
+<input id="rounds" type="number" min="1" max="99" value="5">
+<div class="unit">Total boxing rounds</div>
+</div>
+
+<div class="field">
+<label>BOXING TIME (MINUTES)</label>
+<input id="boxingTime" type="number" min="1" max="60" value="3">
+<div class="unit">Duration of each round</div>
+</div>
+
+<div class="field">
+<label>BREAK TIME (SECONDS)</label>
+<input id="breakTime" type="number" min="0" max="600" value="60">
+<div class="unit">Rest between rounds</div>
+</div>
+
+<button class="primary" onclick="startWorkout()">
+START WORKOUT →
+</button>
+
+<div class="info">
+🔴 BOXING — Red timer<br>
+🟢 BREAK — Green timer<br>
+⚪ FINISHED — White timer<br>
+<br>
+Customize your workout and press Start.
+</div>
+
+</section>
+
+
+<!-- SCREEN 2: TIMER -->
+
+<section id="timerScreen" class="hidden">
+
+<div class="timer-top">
+<button class="back" onclick="goBack()">← Back</button>
+<div class="round-info" id="roundInfo">ROUND 1 / 5</div>
+</div>
+
+<div class="timer-screen" id="timerContainer">
+
+<div class="phase" id="phaseText">BOXING</div>
+
+<div class="circle">
+
+<svg viewBox="0 0 240 240">
+<circle class="track"
+cx="120" cy="120" r="110"/>
+<circle class="progress"
+id="progress"
+cx="120" cy="120" r="110"/>
+</svg>
+
+<div class="time-display">
+<div class="time" id="timeDisplay">03:00</div>
+<div class="time-label">TIME REMAINING</div>
+</div>
+
+</div>
+
+<div class="status" id="statusText">
+Keep fighting. Stay focused.
+</div>
+
+<div id="finishedMessage" class="finished-message hidden">
+WORKOUT COMPLETED! 🥊
+</div>
+
+<div class="controls">
+
+<button class="control-btn pause-btn"
+id="pauseButton"
+onclick="togglePause()">
+❚❚ PAUSE
+</button>
+
+<button class="control-btn skip-btn"
+onclick="skipRound()">
+⏭ SKIP ROUND
+</button>
+
+<button class="control-btn reset-btn"
+onclick="resetWorkout()">
+↻ RESET WORKOUT
+</button>
+
+</div>
+
+</div>
+
+</section>
+
+<div class="footer">SUSHIBOX • TRAIN HARDER</div>
+
+</div>
+
+
+<script>
+
+const setupScreen = document.getElementById("setupScreen");
+const timerScreen = document.getElementById("timerScreen");
+
+const timeDisplay = document.getElementById("timeDisplay");
+const phaseText = document.getElementById("phaseText");
+const roundInfo = document.getElementById("roundInfo");
+const progress = document.getElementById("progress");
+const statusText = document.getElementById("statusText");
+const timerContainer = document.getElementById("timerContainer");
+const pauseButton = document.getElementById("pauseButton");
+const finishedMessage = document.getElementById("finishedMessage");
+
+const CIRCUMFERENCE = 2 * Math.PI * 110;
+
+let totalRounds = 5;
+let boxingSeconds = 180;
+let breakSeconds = 60;
+
+let currentRound = 1;
+let phase = "boxing";
+let remaining = 180;
+let phaseDuration = 180;
+
+let interval = null;
+let running = false;
+let deadline = 0;
+
+
+// Format seconds into MM:SS
+
+function formatTime(seconds) {
+let mins = Math.floor(seconds / 60);
+let secs = seconds % 60;
+
+return String(mins).padStart(2, "0")
++ ":" +
+String(secs).padStart(2, "0");
+}
+
+
+// Start workout
+
+function startWorkout() {
+
+totalRounds = Number(document.getElementById("rounds").value);
+boxingSeconds = Number(document.getElementById("boxingTime").value) * 60;
+breakSeconds = Number(document.getElementById("breakTime").value);
+
+if (
+!Number.isInteger(totalRounds) ||
+totalRounds < 1 || totalRounds > 99 ||
+!Number.isInteger(boxingSeconds) ||
+boxingSeconds < 60 || boxingSeconds > 3600 ||
+!Number.isInteger(breakSeconds) ||
+breakSeconds < 0 || breakSeconds > 600
+) {
+alert("Please enter valid workout settings.");
+return;
+}
+
+clearInterval(interval);
+
+currentRound = 1;
+phase = "boxing";
+remaining = boxingSeconds;
+phaseDuration = boxingSeconds;
+
+setupScreen.classList.add("hidden");
+timerScreen.classList.remove("hidden");
+
+timerContainer.classList.remove("finished");
+finishedMessage.classList.add("hidden");
+
+running = true;
+pauseButton.textContent = "❚❚ PAUSE";
+
+renderTimer();
+startClock();
+}
+
+
+// Start accurate countdown
+
+function startClock() {
+
+clearInterval(interval);
+
+deadline = Date.now() + remaining * 1000;
+
+interval = setInterval(() => {
+
+remaining = Math.max(
+0,
+Math.ceil((deadline - Date.now()) / 1000)
+);
+
+renderTimer();
+
+if (remaining <= 0) {
+nextPhase();
+}
+
+}, 150);
+}
+
+
+// Update timer interface
+
+function renderTimer() {
+
+timeDisplay.textContent = formatTime(remaining);
+
+roundInfo.textContent =
+"ROUND " + currentRound + " / " + totalRounds;
+
+let fraction = phaseDuration > 0
+? remaining / phaseDuration
+: 0;
+
+progress.style.strokeDasharray = CIRCUMFERENCE;
+progress.style.strokeDashoffset =
+CIRCUMFERENCE * (1 - fraction);
+
+if (phase === "boxing") {
+
+phaseText.textContent = "BOXING";
+progress.style.stroke = "#ff4545";
+phaseText.style.color = "#ff4545";
+statusText.textContent = "Keep fighting. Stay focused.";
+
+} else if (phase === "break") {
+
+phaseText.textContent = "BREAK";
+progress.style.stroke = "#20d878";
+phaseText.style.color = "#20d878";
+statusText.textContent = "Rest and prepare for next round.";
+
+} else {
+
+phaseText.textContent = "FINISHED";
+progress.style.stroke = "#ffffff";
+phaseText.style.color = "#ffffff";
+statusText.textContent = "You gave it your best.";
+
+}
+}
+
+
+// Move to next phase
+
+function nextPhase() {
+
+clearInterval(interval);
+
+if (phase === "boxing") {
+
+if (currentRound >= totalRounds) {
+finishWorkout();
+return;
+}
+
+if (breakSeconds === 0) {
+currentRound++;
+phase = "boxing";
+remaining = boxingSeconds;
+phaseDuration = boxingSeconds;
+} else {
+phase = "break";
+remaining = breakSeconds;
+phaseDuration = breakSeconds;
+}
+
+} else if (phase === "break") {
+
+currentRound++;
+phase = "boxing";
+remaining = boxingSeconds;
+phaseDuration = boxingSeconds;
+
+}
+
+renderTimer();
+
+if (running) {
+startClock();
+}
+}
+
+
+// Finish workout
+
+function finishWorkout() {
+
+clearInterval(interval);
+
+phase = "finished";
+remaining = 0;
+phaseDuration = 1;
+
+running = false;
+
+renderTimer();
+
+timerContainer.classList.add("finished");
+
+timeDisplay.textContent = "00:00";
+finishedMessage.classList.remove("hidden");
+
+pauseButton.textContent = "COMPLETED";
+pauseButton.disabled = true;
+pauseButton.style.opacity = "0.5";
+
+statusText.textContent = "All rounds completed.";
+}
+
+
+// Pause / Resume
+
+function togglePause() {
+
+if (phase === "finished") return;
+
+if (running) {
+
+remaining = Math.max(
+0,
+Math.ceil((deadline - Date.now()) / 1000)
+);
+
+clearInterval(interval);
+running = false;
+
+pauseButton.textContent = "▶ RESUME";
+
+renderTimer();
+
+} else {
+
+if (remaining <= 0) {
+nextPhase();
+return;
+}
+
+running = true;
+
+pauseButton.textContent = "❚❚ PAUSE";
+
+startClock();
+}
+}
+
+
+// Skip current round and its break
+
+function skipRound() {
+
+if (phase === "finished") return;
+
+clearInterval(interval);
+
+if (currentRound >= totalRounds) {
+finishWorkout();
+return;
+}
+
+currentRound++;
+phase = "boxing";
+remaining = boxingSeconds;
+phaseDuration = boxingSeconds;
+
+running = true;
+
+pauseButton.disabled = false;
+pauseButton.style.opacity = "1";
+pauseButton.textContent = "❚❚ PAUSE";
+
+timerContainer.classList.remove("finished");
+
+renderTimer();
+startClock();
+}
+
+
+// Reset
+
+function resetWorkout() {
+
+clearInterval(interval);
+
+currentRound = 1;
+phase = "boxing";
+remaining = boxingSeconds;
+phaseDuration = boxingSeconds;
+
+running = true;
+
+timerContainer.classList.remove("finished");
+finishedMessage.classList.add("hidden");
+
+pauseButton.disabled = false;
+pauseButton.style.opacity = "1";
+pauseButton.textContent = "❚❚ PAUSE";
+
+renderTimer();
+startClock();
+}
+
+
+// Back to customization
+
+function goBack() {
+
+clearInterval(interval);
+running = false;
+
+timerScreen.classList.add("hidden");
+setupScreen.classList.remove("hidden");
+
+timerContainer.classList.remove("finished");
+}
+
+</script>
+
+</body>
+</html>
