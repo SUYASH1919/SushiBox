@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -303,6 +304,12 @@ margin-top: 22px;
 <p class="subtitle">Set your rounds. Get ready to fight.</p>
 
 <div class="field">
+<label>PREPARATION TIME (MINUTES)</label>
+<input id="prepTime" type="number" min="0" max="300" value="1">
+<div class="unit">Get ready before your first round</div>
+</div>
+
+<div class="field">
 <label>NUMBER OF ROUNDS</label>
 <input id="rounds" type="number" min="1" max="99" value="5">
 <div class="unit">Total boxing rounds</div>
@@ -325,6 +332,7 @@ START WORKOUT →
 </button>
 
 <div class="info">
+🔵 PREPARATION — Blue timer<br>
 🔴 BOXING — Red timer<br>
 🟢 BREAK — Green timer<br>
 ⚪ FINISHED — White timer<br>
@@ -333,7 +341,6 @@ Customize your workout and press Start.
 </div>
 
 </section>
-
 
 <!-- SCREEN 2: TIMER -->
 
@@ -382,6 +389,7 @@ onclick="togglePause()">
 </button>
 
 <button class="control-btn skip-btn"
+id="skipButton"
 onclick="skipRound()">
 ⏭ SKIP ROUND
 </button>
@@ -401,7 +409,6 @@ onclick="resetWorkout()">
 
 </div>
 
-
 <script>
 
 const setupScreen = document.getElementById("setupScreen");
@@ -414,49 +421,119 @@ const progress = document.getElementById("progress");
 const statusText = document.getElementById("statusText");
 const timerContainer = document.getElementById("timerContainer");
 const pauseButton = document.getElementById("pauseButton");
+const skipButton = document.getElementById("skipButton");
 const finishedMessage = document.getElementById("finishedMessage");
 
 const CIRCUMFERENCE = 2 * Math.PI * 110;
 
+let prepSeconds = 60;
 let totalRounds = 5;
 let boxingSeconds = 180;
 let breakSeconds = 60;
 
 let currentRound = 1;
-let phase = "boxing";
-let remaining = 180;
-let phaseDuration = 180;
+let phase = "ready";
+let remaining = 0;
+let phaseDuration = 0;
 
 let interval = null;
 let running = false;
 let deadline = 0;
+let lastBeep = -1;
+
+let audioContext = null;
 
 
-// Format seconds into MM:SS
+// OFFLINE AUDIO
+
+function getAudioContext() {
+const AudioClass = window.AudioContext || window.webkitAudioContext;
+
+if (!AudioClass) return null;
+
+if (!audioContext) {
+audioContext = new AudioClass();
+}
+
+if (audioContext.state === "suspended") {
+audioContext.resume();
+}
+
+return audioContext;
+}
+
+
+function playTone(frequency, duration = 0.3) {
+
+try {
+
+const ctx = getAudioContext();
+if (!ctx) return;
+
+const oscillator = ctx.createOscillator();
+const gain = ctx.createGain();
+
+oscillator.connect(gain);
+gain.connect(ctx.destination);
+
+oscillator.type = "sine";
+oscillator.frequency.value = frequency;
+
+gain.gain.setValueAtTime(0.3, ctx.currentTime);
+gain.gain.exponentialRampToValueAtTime(
+0.001,
+ctx.currentTime + duration
+);
+
+oscillator.start();
+oscillator.stop(ctx.currentTime + duration);
+
+} catch (error) {
+console.log("Audio error:", error);
+}
+
+}
+
+
+function playBell() {
+playTone(1000, 0.5);
+setTimeout(() => playTone(1300, 0.5), 300);
+}
+
+
+// FORMAT TIME
 
 function formatTime(seconds) {
+
 let mins = Math.floor(seconds / 60);
 let secs = seconds % 60;
 
 return String(mins).padStart(2, "0")
 + ":" +
 String(secs).padStart(2, "0");
+
 }
 
 
-// Start workout
+// START WORKOUT
 
 function startWorkout() {
 
+prepSeconds = Number(document.getElementById("prepTime").value) * 60;
 totalRounds = Number(document.getElementById("rounds").value);
 boxingSeconds = Number(document.getElementById("boxingTime").value) * 60;
 breakSeconds = Number(document.getElementById("breakTime").value);
 
 if (
+!Number.isInteger(prepSeconds) ||
+prepSeconds < 0 || prepSeconds > 18000 ||
+
 !Number.isInteger(totalRounds) ||
 totalRounds < 1 || totalRounds > 99 ||
+
 !Number.isInteger(boxingSeconds) ||
 boxingSeconds < 60 || boxingSeconds > 3600 ||
+
 !Number.isInteger(breakSeconds) ||
 breakSeconds < 0 || breakSeconds > 600
 ) {
@@ -467,9 +544,17 @@ return;
 clearInterval(interval);
 
 currentRound = 1;
+lastBeep = -1;
+
+if (prepSeconds > 0) {
+phase = "prep";
+remaining = prepSeconds;
+phaseDuration = prepSeconds;
+} else {
 phase = "boxing";
 remaining = boxingSeconds;
 phaseDuration = boxingSeconds;
+}
 
 setupScreen.classList.add("hidden");
 timerScreen.classList.remove("hidden");
@@ -477,15 +562,23 @@ timerScreen.classList.remove("hidden");
 timerContainer.classList.remove("finished");
 finishedMessage.classList.add("hidden");
 
-running = true;
+pauseButton.disabled = false;
+pauseButton.style.opacity = "1";
 pauseButton.textContent = "❚❚ PAUSE";
+
+running = true;
+
+if (phase === "boxing") {
+playBell();
+}
 
 renderTimer();
 startClock();
+
 }
 
 
-// Start accurate countdown
+// ACCURATE COUNTDOWN
 
 function startClock() {
 
@@ -495,10 +588,22 @@ deadline = Date.now() + remaining * 1000;
 
 interval = setInterval(() => {
 
-remaining = Math.max(
+const newRemaining = Math.max(
 0,
 Math.ceil((deadline - Date.now()) / 1000)
 );
+
+if (
+newRemaining < remaining &&
+newRemaining > 0 &&
+newRemaining <= 10 &&
+newRemaining !== lastBeep
+) {
+playTone(650, 0.12);
+lastBeep = newRemaining;
+}
+
+remaining = newRemaining;
 
 renderTimer();
 
@@ -507,10 +612,11 @@ nextPhase();
 }
 
 }, 150);
+
 }
 
 
-// Update timer interface
+// UPDATE INTERFACE
 
 function renderTimer() {
 
@@ -527,12 +633,24 @@ progress.style.strokeDasharray = CIRCUMFERENCE;
 progress.style.strokeDashoffset =
 CIRCUMFERENCE * (1 - fraction);
 
-if (phase === "boxing") {
+
+if (phase === "prep") {
+
+phaseText.textContent = "PREPARATION";
+progress.style.stroke = "#2995ff";
+phaseText.style.color = "#2995ff";
+statusText.textContent = "Get ready. Your workout starts soon.";
+
+skipButton.textContent = "⏭ SKIP PREP";
+
+} else if (phase === "boxing") {
 
 phaseText.textContent = "BOXING";
 progress.style.stroke = "#ff4545";
 phaseText.style.color = "#ff4545";
 statusText.textContent = "Keep fighting. Stay focused.";
+
+skipButton.textContent = "⏭ SKIP ROUND";
 
 } else if (phase === "break") {
 
@@ -541,6 +659,8 @@ progress.style.stroke = "#20d878";
 phaseText.style.color = "#20d878";
 statusText.textContent = "Rest and prepare for next round.";
 
+skipButton.textContent = "⏭ SKIP BREAK";
+
 } else {
 
 phaseText.textContent = "FINISHED";
@@ -548,17 +668,30 @@ progress.style.stroke = "#ffffff";
 phaseText.style.color = "#ffffff";
 statusText.textContent = "You gave it your best.";
 
+skipButton.textContent = "COMPLETED";
+
 }
+
 }
 
 
-// Move to next phase
+// MOVE TO NEXT PHASE
 
 function nextPhase() {
 
 clearInterval(interval);
+lastBeep = -1;
 
-if (phase === "boxing") {
+if (phase === "prep") {
+
+phase = "boxing";
+remaining = boxingSeconds;
+phaseDuration = boxingSeconds;
+playBell();
+
+} else if (phase === "boxing") {
+
+playBell();
 
 if (currentRound >= totalRounds) {
 finishWorkout();
@@ -566,14 +699,20 @@ return;
 }
 
 if (breakSeconds === 0) {
+
 currentRound++;
 phase = "boxing";
 remaining = boxingSeconds;
 phaseDuration = boxingSeconds;
+
+playBell();
+
 } else {
+
 phase = "break";
 remaining = breakSeconds;
 phaseDuration = breakSeconds;
+
 }
 
 } else if (phase === "break") {
@@ -583,6 +722,8 @@ phase = "boxing";
 remaining = boxingSeconds;
 phaseDuration = boxingSeconds;
 
+playBell();
+
 }
 
 renderTimer();
@@ -590,10 +731,11 @@ renderTimer();
 if (running) {
 startClock();
 }
+
 }
 
 
-// Finish workout
+// FINISH WORKOUT
 
 function finishWorkout() {
 
@@ -616,11 +758,18 @@ pauseButton.textContent = "COMPLETED";
 pauseButton.disabled = true;
 pauseButton.style.opacity = "0.5";
 
+skipButton.disabled = true;
+skipButton.style.opacity = "0.5";
+
 statusText.textContent = "All rounds completed.";
+
+playBell();
+setTimeout(playBell, 1000);
+
 }
 
 
-// Pause / Resume
+// PAUSE / RESUME
 
 function togglePause() {
 
@@ -652,17 +801,28 @@ running = true;
 pauseButton.textContent = "❚❚ PAUSE";
 
 startClock();
+
 }
+
 }
 
 
-// Skip current round and its break
+// SKIP PREP / ROUND / BREAK
 
 function skipRound() {
 
 if (phase === "finished") return;
 
 clearInterval(interval);
+lastBeep = -1;
+
+if (phase === "prep") {
+
+phase = "boxing";
+remaining = boxingSeconds;
+phaseDuration = boxingSeconds;
+
+} else if (phase === "boxing") {
 
 if (currentRound >= totalRounds) {
 finishWorkout();
@@ -670,9 +830,20 @@ return;
 }
 
 currentRound++;
+
 phase = "boxing";
 remaining = boxingSeconds;
 phaseDuration = boxingSeconds;
+
+} else if (phase === "break") {
+
+currentRound++;
+
+phase = "boxing";
+remaining = boxingSeconds;
+phaseDuration = boxingSeconds;
+
+}
 
 running = true;
 
@@ -680,23 +851,40 @@ pauseButton.disabled = false;
 pauseButton.style.opacity = "1";
 pauseButton.textContent = "❚❚ PAUSE";
 
+skipButton.disabled = false;
+skipButton.style.opacity = "1";
+
 timerContainer.classList.remove("finished");
 
+playBell();
 renderTimer();
 startClock();
+
 }
 
 
-// Reset
+// RESET WORKOUT
 
 function resetWorkout() {
 
 clearInterval(interval);
 
 currentRound = 1;
+lastBeep = -1;
+
+if (prepSeconds > 0) {
+
+phase = "prep";
+remaining = prepSeconds;
+phaseDuration = prepSeconds;
+
+} else {
+
 phase = "boxing";
 remaining = boxingSeconds;
 phaseDuration = boxingSeconds;
+
+}
 
 running = true;
 
@@ -707,12 +895,20 @@ pauseButton.disabled = false;
 pauseButton.style.opacity = "1";
 pauseButton.textContent = "❚❚ PAUSE";
 
+skipButton.disabled = false;
+skipButton.style.opacity = "1";
+
+if (phase === "boxing") {
+playBell();
+}
+
 renderTimer();
 startClock();
+
 }
 
 
-// Back to customization
+// BACK TO CUSTOMIZATION
 
 function goBack() {
 
@@ -723,9 +919,11 @@ timerScreen.classList.add("hidden");
 setupScreen.classList.remove("hidden");
 
 timerContainer.classList.remove("finished");
+
 }
 
 </script>
 
 </body>
 </html>
+
